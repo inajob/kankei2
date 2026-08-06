@@ -65,6 +65,8 @@
   }
 
   async function undo(edgeId: string, name: string) {
+    const ok = window.confirm(`「${name}」との統合（同一視）を解除しますか？`)
+    if (!ok) return
     await disconnect(edgeId)
     feedback = `「${name}」との統合を解除しました`
     window.setTimeout(() => (feedback = ''), 2500)
@@ -225,8 +227,15 @@
         </p>
         <ul class="flex flex-wrap gap-2">
           {#each sameAs as s (s.edgeId)}
-            <li class="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-sm text-amber-800">
-              <span>{s.node.name}</span>
+            <li class="flex items-center gap-1 rounded-full bg-amber-50 py-1 pl-1 pr-2 text-sm text-amber-800">
+              <button
+                type="button"
+                onclick={() => currentNodeId.set(s.node.id)}
+                title="このノードを開く"
+                class="rounded-full px-2 py-0.5 hover:bg-amber-100 hover:underline"
+              >
+                {s.node.name}
+              </button>
               <button
                 type="button"
                 onclick={() => undo(s.edgeId, s.node.name)}
