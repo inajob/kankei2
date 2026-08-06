@@ -46,7 +46,7 @@
   <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4">
     <div class="w-full max-w-sm">
       <div class="mb-6 text-center">
-        <p class="text-3xl">🏷️</p>
+        <p class="text-3xl">✳️</p>
         <h1 class="mt-2 text-xl font-bold text-slate-900">Kankei</h1>
         <p class="text-sm text-slate-500">ご近所・日常のグラフ型メモ</p>
       </div>

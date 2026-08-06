@@ -48,49 +48,70 @@ export const sameAsNodes = derived(
   },
 )
 
+function computeConnections(
+  allNodes: Node[],
+  allEdges: Edge[],
+  centerId: string,
+): Connection[] {
+  const map = new Map(allNodes.map((n) => [n.id, n]))
+  const direct = incidentEdges(allEdges, centerId)
+
+  const sameAsNeighborIds = new Set<string>()
+  for (const e of direct) {
+    if (e.is_same_as) sameAsNeighborIds.add(opposite(e, centerId))
+  }
+  const viaFor = new Map<string, { id: string; name: string }>()
+  for (const sid of sameAsNeighborIds) {
+    const sn = map.get(sid)
+    viaFor.set(sid, { id: sid, name: sn?.name ?? sid })
+  }
+
+  const seen = new Set<string>()
+  const result: Connection[] = []
+  const addEdges = (
+    ownerId: string,
+    edgeList: Edge[],
+    via?: { id: string; name: string },
+  ) => {
+    for (const e of edgeList) {
+      if (e.is_same_as) continue
+      const nid = opposite(e, ownerId)
+      if (!map.has(nid) || seen.has(nid)) continue
+      seen.add(nid)
+      result.push({
+        edgeId: e.id,
+        node: map.get(nid)!,
+        viaSameAs: via,
+        degree: incidentEdges(allEdges, nid).length,
+      })
+    }
+  }
+
+  addEdges(centerId, direct)
+  for (const sid of sameAsNeighborIds) {
+    addEdges(sid, incidentEdges(allEdges, sid), viaFor.get(sid))
+  }
+  return result
+}
+
 export const connections = derived(
   [currentNodeId, nodes, edges],
-  ([$id, $nodes, $edges]) => {
-    if (!$id) return [] as Connection[]
-    const map = new Map($nodes.map((n) => [n.id, n]))
-    const direct = incidentEdges($edges, $id)
+  ([$id, $nodes, $edges]) => ($id ? computeConnections($nodes, $edges, $id) : []),
+)
 
-    const sameAsNeighborIds = new Set<string>()
-    for (const e of direct) {
-      if (e.is_same_as) sameAsNeighborIds.add(opposite(e, $id))
-    }
-    const viaFor = new Map<string, { id: string; name: string }>()
-    for (const sid of sameAsNeighborIds) {
-      const sn = map.get(sid)
-      viaFor.set(sid, { id: sid, name: sn?.name ?? sid })
-    }
+export type SameNameGroup = {
+  node: Node
+  connections: Connection[]
+}
 
-    const seen = new Set<string>()
-    const result: Connection[] = []
-    const addEdges = (
-      ownerId: string,
-      edgeList: Edge[],
-      via?: { id: string; name: string },
-    ) => {
-      for (const e of edgeList) {
-        if (e.is_same_as) continue
-        const nid = opposite(e, ownerId)
-        if (!map.has(nid) || seen.has(nid)) continue
-        seen.add(nid)
-        result.push({
-          edgeId: e.id,
-          node: map.get(nid)!,
-          viaSameAs: via,
-          degree: incidentEdges($edges, nid).length,
-        })
-      }
-    }
-
-    addEdges($id, direct)
-    for (const sid of sameAsNeighborIds) {
-      addEdges(sid, incidentEdges($edges, sid), viaFor.get(sid))
-    }
-    return result
+export const sameNameGroups = derived(
+  [currentNode, nodes, edges],
+  ([$cur, $nodes, $edges]) => {
+    if (!$cur) return [] as SameNameGroup[]
+    return $nodes
+      .filter((n) => n.id !== $cur.id && n.name === $cur.name)
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+      .map((n) => ({ node: n, connections: computeConnections($nodes, $edges, n.id) }))
   },
 )
 

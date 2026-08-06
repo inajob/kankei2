@@ -6,6 +6,7 @@
   import ConnectedNodeList from './components/ConnectedNodeList.svelte'
   import RecentNodes from './components/RecentNodes.svelte'
   import SearchResults from './components/SearchResults.svelte'
+  import SameNameNodes from './components/SameNameNodes.svelte'
   import { allowed, authLoading, checkAllowed, session, signOut } from './lib/auth'
   import { clearGraph, currentNodeId, loadGraph, loading, searchLocal } from './lib/stores'
 
@@ -70,7 +71,7 @@
           title="ホーム"
           class="shrink-0 rounded-lg p-1 text-xl hover:bg-slate-100"
         >
-          🏷️
+          ✳️
         </button>
         <SearchBar bind:value={searchQuery} />
         <div class="flex shrink-0 items-center gap-2">
@@ -99,6 +100,7 @@
         <CurrentNode />
         <QuickAddForm />
         <ConnectedNodeList />
+        <SameNameNodes />
       {/if}
     </main>
   </div>
