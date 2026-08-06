@@ -7,6 +7,7 @@
   import RecentNodes from './components/RecentNodes.svelte'
   import SearchResults from './components/SearchResults.svelte'
   import SameNameNodes from './components/SameNameNodes.svelte'
+  import Splash from './components/Splash.svelte'
   import { allowed, authLoading, checkAllowed, session, signOut } from './lib/auth'
   import { clearGraph, currentNodeId, loadGraph, loading, searchLocal } from './lib/stores'
 
@@ -37,13 +38,11 @@
   }
 </script>
 
-{#if $authLoading}
-  <div class="flex min-h-screen items-center justify-center text-slate-400">
-    読み込み中…
-  </div>
+{#if $authLoading || $loading || (loggedIn && $allowed === null)}
+  <Splash />
 {:else if !loggedIn}
   <Auth />
-{:else if $allowed !== true}
+{:else if $allowed === false}
   <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4">
     <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
       <p class="text-4xl">🔒</p>
@@ -90,9 +89,7 @@
     </header>
 
     <main class="mt-4 flex flex-col gap-4">
-      {#if $loading}
-        <p class="py-10 text-center text-sm text-slate-400">読み込み中…</p>
-      {:else if searchQuery.trim()}
+      {#if searchQuery.trim()}
         <SearchResults nodes={searchResults} />
       {:else if !hasCurrent}
         <RecentNodes />
