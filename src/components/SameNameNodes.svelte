@@ -32,7 +32,6 @@
             {#if g.node.context_note}
               <span class="truncate text-xs text-slate-400">{g.node.context_note}</span>
             {/if}
-            <span class="text-xs text-indigo-500">→ このノードへ</span>
           </button>
 
           {#if g.connections.length > 0}

@@ -155,16 +155,18 @@
               type="button"
               onclick={startEditName}
               title="クリックして名前を編集"
-              class="truncate text-xl font-bold text-slate-900 hover:text-indigo-600 hover:underline"
+              class="break-words text-left text-xl font-bold text-slate-900 hover:text-indigo-600 hover:underline"
             >
               {current.name}
             </button>
           {/if}
-          <span
-            class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600"
-          >
-            {current.type}
-          </span>
+          {#if current.type !== 'entity'}
+            <span
+              class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600"
+            >
+              {current.type}
+            </span>
+          {/if}
         </div>
 
         <div class="mt-1.5 text-sm text-slate-500">
