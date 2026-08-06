@@ -1,9 +1,7 @@
 <script lang="ts">
-  import NodeAutocomplete from './NodeAutocomplete.svelte'
   import { detectNodeType, nodeIcon } from '../lib/parser'
   import {
     adjacentDate,
-    connect,
     createNode,
     currentNode,
     currentNodeId,
@@ -12,7 +10,6 @@
     sameAsNodes,
     updateNodeMeta,
   } from '../lib/stores'
-  import type { Node } from '../lib/types'
 
   let current = $derived($currentNode)
   let sameAs = $derived($sameAsNodes)
@@ -20,8 +17,17 @@
   let nameDraft = $state('')
   let editingNote = $state(false)
   let noteDraft = $state('')
-  let merging = $state(false)
   let feedback = $state('')
+  let nameInputEl = $state<HTMLInputElement>()
+  let noteInputEl = $state<HTMLInputElement>()
+
+  $effect(() => {
+    if (editingName) nameInputEl?.focus()
+  })
+
+  $effect(() => {
+    if (editingNote) noteInputEl?.focus()
+  })
 
   function startEditName() {
     nameDraft = current?.name ?? ''
@@ -58,20 +64,6 @@
     }
   }
 
-  async function sameAsTo(node: Node) {
-    if (!current) return
-    await connect(current.id, node.id, { is_same_as: true })
-    merging = false
-    feedback = `「${node.name}」と同一視しました`
-    window.setTimeout(() => (feedback = ''), 2500)
-  }
-
-  async function sameAsCreate(name: string) {
-    if (!current) return
-    const n = await createNode(name)
-    await sameAsTo(n)
-  }
-
   async function undo(edgeId: string, name: string) {
     await disconnect(edgeId)
     feedback = `「${name}」との統合を解除しました`
@@ -85,6 +77,26 @@
     )
     if (!ok) return
     await deleteNode(current.id)
+  }
+
+  function onNameKey(e: KeyboardEvent) {
+    if (e.isComposing) return
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      saveName()
+    } else if (e.key === 'Escape') {
+      editingName = false
+    }
+  }
+
+  function onNoteKey(e: KeyboardEvent) {
+    if (e.isComposing) return
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      saveNote()
+    } else if (e.key === 'Escape') {
+      editingNote = false
+    }
   }
 </script>
 
@@ -110,7 +122,7 @@
     {/if}
 
     <div class="flex items-start gap-3">
-      <span class="text-3xl">{nodeIcon(current.type)}</span>
+      <span class="mt-0.5 text-3xl">{nodeIcon(current.type)}</span>
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">
           {#if editingName}
@@ -118,6 +130,8 @@
               <input
                 type="text"
                 bind:value={nameDraft}
+                bind:this={nameInputEl}
+                onkeydown={onNameKey}
                 placeholder="ノード名"
                 class="rounded-lg border border-slate-300 px-2 py-1 text-xl font-bold text-slate-900 outline-none focus:border-indigo-400"
               />
@@ -137,14 +151,13 @@
               </button>
             </div>
           {:else}
-            <h1 class="truncate text-xl font-bold text-slate-900">{current.name}</h1>
             <button
               type="button"
               onclick={startEditName}
-              title="名前を変更"
-              class="text-xs text-indigo-500 hover:underline"
+              title="クリックして名前を編集"
+              class="truncate text-xl font-bold text-slate-900 hover:text-indigo-600 hover:underline"
             >
-              変更
+              {current.name}
             </button>
           {/if}
           <span
@@ -153,12 +166,15 @@
             {current.type}
           </span>
         </div>
-        <div class="mt-2 text-sm text-slate-500">
+
+        <div class="mt-1.5 text-sm text-slate-500">
           {#if editingNote}
             <div class="flex items-center gap-2">
               <input
                 type="text"
                 bind:value={noteDraft}
+                bind:this={noteInputEl}
+                onkeydown={onNoteKey}
                 placeholder="識別用の一言メモ（例: 向かいの家）"
                 class="flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-indigo-400"
               />
@@ -178,33 +194,30 @@
               </button>
             </div>
           {:else}
-            <div class="flex items-center gap-2">
-              <span class={current.context_note ? '' : 'text-slate-300'}>
-                {current.context_note || 'コンテキストメモなし'}
-              </span>
-              <button
-                type="button"
-                onclick={startEditNote}
-                class="text-xs text-indigo-500 hover:underline"
-              >
-                編集
-              </button>
-            </div>
+            <button
+              type="button"
+              onclick={startEditNote}
+              title="クリックして編集"
+              class="text-left hover:text-indigo-600 hover:underline {current.context_note ? '' : 'text-slate-300'}"
+            >
+              {current.context_note || 'コンテキストメモを追加'}
+            </button>
           {/if}
         </div>
       </div>
+
       <button
         type="button"
         onclick={remove}
         title="ノードを削除"
-        class="shrink-0 rounded-lg border border-rose-200 px-2.5 py-1.5 text-sm text-rose-500 hover:bg-rose-50"
+        class="shrink-0 self-start rounded-lg p-1.5 text-sm text-slate-300 hover:bg-rose-50 hover:text-rose-500"
       >
-        削除
+        🗑
       </button>
     </div>
 
     {#if sameAs.length > 0}
-      <div class="mt-4 border-t border-slate-100 pt-3">
+      <div class="mt-3 border-t border-slate-100 pt-3">
         <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
           同一視（SameAs）
         </p>
@@ -225,27 +238,6 @@
         </ul>
       </div>
     {/if}
-
-    <div class="mt-4 flex items-center gap-2">
-      {#if merging}
-        <div class="flex-1">
-          <NodeAutocomplete
-            placeholder="統合したいノードを選択 or 新規作成"
-            onSelect={sameAsTo}
-            onCreate={sameAsCreate}
-            autofocus
-          />
-        </div>
-      {:else}
-        <button
-          type="button"
-          onclick={() => (merging = true)}
-          class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100"
-        >
-          同じものとして統合（SameAs）
-        </button>
-      {/if}
-    </div>
 
     {#if feedback}
       <p class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">

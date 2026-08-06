@@ -4,6 +4,7 @@
   import type { Node } from '../lib/types'
 
   let message = $state('')
+  let isSameAs = $state(false)
 
   function flash(text: string) {
     message = text
@@ -13,16 +14,30 @@
   async function connectExisting(node: Node) {
     const cur = $currentNodeId
     if (!cur) return
-    const edge = await connect(cur, node.id)
-    flash(edge ? `「${node.name}」に接続しました` : `「${node.name}」とは既に接続済みです`)
+    const edge = await connect(cur, node.id, { is_same_as: isSameAs })
+    if (isSameAs) {
+      flash(
+        edge
+          ? `「${node.name}」と同一視しました`
+          : `「${node.name}」とは既に接続されています`,
+      )
+    } else {
+      flash(edge ? `「${node.name}」に接続しました` : `「${node.name}」とは既に接続済みです`)
+    }
+    isSameAs = false
   }
 
   async function createAndConnect(name: string) {
     const cur = $currentNodeId
     if (!cur) return
     const n = await createNode(name)
-    await connect(cur, n.id)
-    flash(`「${name}」を作成して接続しました`)
+    await connect(cur, n.id, { is_same_as: isSameAs })
+    flash(
+      isSameAs
+        ? `「${name}」を作成して同一視しました`
+        : `「${name}」を作成して接続しました`,
+    )
+    isSameAs = false
   }
 </script>
 
@@ -33,6 +48,10 @@
     onSelect={connectExisting}
     onCreate={createAndConnect}
   />
+  <label class="mt-2 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+    <input type="checkbox" bind:checked={isSameAs} class="h-4 w-4 accent-amber-500" />
+    同一視する（SameAs）— 同じものとして統合
+  </label>
   {#if message}
     <p class="mt-2 text-sm text-emerald-700">{message}</p>
   {/if}
